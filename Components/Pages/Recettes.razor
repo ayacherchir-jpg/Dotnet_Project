@@ -1,0 +1,270 @@
+@page "/recettes"
+@rendermode InteractiveServer
+@inject IRecetteService RecetteService
+@inject IIngredientService IngredientService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Recettes</PageTitle>
+
+<RadzenText TextStyle="TextStyle.H4" class="mb-4">📖 Carnet de Recettes</RadzenText>
+
+<!-- Formulaire -->
+<RadzenCard class="mb-4">
+    <RadzenText TextStyle="TextStyle.H6" class="mb-3">
+        @(_modeEdition ? "✏️ Modifier la recette" : "➕ Nouvelle recette")
+    </RadzenText>
+
+    <RadzenRow Gap="1rem">
+        <RadzenColumn Size="12" SizeMD="4">
+            <RadzenFormField Text="Nom de la recette" Variant="Variant.Outlined" class="w-100">
+                <RadzenTextBox @bind-Value="_form.Nom" Placeholder="Ex: Couscous au poulet" class="w-100" />
+            </RadzenFormField>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="2">
+            <RadzenFormField Text="Personnes" Variant="Variant.Outlined" class="w-100">
+                <RadzenNumeric @bind-Value="_form.NbPersonnes" Min="1" class="w-100" />
+            </RadzenFormField>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="3">
+            <RadzenFormField Text="Catégorie" Variant="Variant.Outlined" class="w-100">
+                <RadzenDropDown @bind-Value="_form.Categorie" Data="RecetteConstants.Categories" class="w-100" />
+            </RadzenFormField>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="3">
+            <RadzenFormField Text="Type de cuisine" Variant="Variant.Outlined" class="w-100">
+                <RadzenDropDown @bind-Value="_form.TypeCuisine" Data="RecetteConstants.TypesCuisine" class="w-100" />
+            </RadzenFormField>
+        </RadzenColumn>
+        <RadzenColumn Size="12">
+            <RadzenFormField Text="Description (facultatif)" Variant="Variant.Outlined" class="w-100">
+                <RadzenTextArea @bind-Value="_form.Description" Rows="2" class="w-100" />
+            </RadzenFormField>
+        </RadzenColumn>
+    </RadzenRow>
+
+    <!-- Ajout d'ingrédients -->
+    <RadzenText TextStyle="TextStyle.Subtitle1" class="mt-3 mb-2">🥕 Ingrédients de la recette</RadzenText>
+
+    <RadzenRow Gap="1rem" AlignItems="AlignItems.End" class="mb-3">
+        <RadzenColumn Size="12" SizeMD="5">
+            <RadzenFormField Text="Ingrédient" Variant="Variant.Outlined" class="w-100">
+                <RadzenDropDown @bind-Value="_ingredientChoisiId"
+                                Data="@_ingredients"
+                                TextProperty="Nom" ValueProperty="Id"
+                                Placeholder="-- Sélectionner --"
+                                class="w-100" />
+            </RadzenFormField>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="3">
+            <RadzenFormField Text="Quantité" Variant="Variant.Outlined" class="w-100">
+                <RadzenNumeric @bind-Value="_quantite" Min="0.1m" Step="0.5" class="w-100" />
+            </RadzenFormField>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="2">
+            <RadzenButton Text="Ajouter" Icon="add" ButtonStyle="ButtonStyle.Secondary" Click="AjouterIngredient" class="w-100" />
+        </RadzenColumn>
+    </RadzenRow>
+
+    @if (_form.Ingredients.Any())
+    {
+        <RadzenDataGrid Data="@_form.Ingredients" TItem="RecetteIngredient" class="mb-3">
+            <Columns>
+                <RadzenDataGridColumn TItem="RecetteIngredient" Title="Ingrédient">
+                    <Template Context="ri">@ri.Ingredient.Nom</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RecetteIngredient" Title="Quantité">
+                    <Template Context="ri">@ri.Quantite @ri.Ingredient.Unite</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RecetteIngredient" Title="Calories">
+                    <Template Context="ri">@ri.CaloriesTotal.ToString("F0") kcal</Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="RecetteIngredient" Title="" Width="80px">
+                    <Template Context="ri">
+                        <RadzenButton Icon="remove_circle" ButtonStyle="ButtonStyle.Danger"
+                                      Size="ButtonSize.Small" Click="() => RetirerIngredient(ri)" />
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+
+        <RadzenRow class="mb-2">
+            <RadzenColumn>
+                <RadzenBadge BadgeStyle="BadgeStyle.Warning" Text="@($"Total : {_form.CaloriesTotales:F0} kcal")" class="me-2" />
+                <RadzenBadge BadgeStyle="BadgeStyle.Info" Text="@($"Par personne : {_form.CaloriesParPersonne:F0} kcal")" />
+            </RadzenColumn>
+        </RadzenRow>
+    }
+
+    <div class="d-flex gap-2 mt-2">
+        <RadzenButton Text="@(_modeEdition ? "Enregistrer" : "Créer la recette")"
+                      ButtonStyle="ButtonStyle.Success" Icon="save" Click="Sauvegarder" />
+        @if (_modeEdition)
+        {
+            <RadzenButton Text="Annuler" ButtonStyle="ButtonStyle.Light" Click="Annuler" />
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <RadzenAlert AlertStyle="AlertStyle.Success" class="mt-3">@_message</RadzenAlert>
+    }
+</RadzenCard>
+
+<!-- Filtre + liste des recettes -->
+<RadzenCard>
+    <RadzenRow AlignItems="AlignItems.Center" class="mb-3">
+        <RadzenColumn>
+            <RadzenText TextStyle="TextStyle.H6">📋 Mes Recettes (@_recettes.Count)</RadzenText>
+        </RadzenColumn>
+        <RadzenColumn class="d-flex gap-2 justify-content-end flex-wrap">
+            <RadzenButton Text="Toutes" ButtonStyle="@(_filtreCategorie == "" ? ButtonStyle.Primary : ButtonStyle.Light)"
+                          Click='() => _filtreCategorie = ""' Size="ButtonSize.Small" />
+            @foreach (var cat in RecetteConstants.Categories)
+            {
+                <RadzenButton Text="@cat"
+                              ButtonStyle="@(_filtreCategorie == cat ? ButtonStyle.Primary : ButtonStyle.Light)"
+                              Click="() => _filtreCategorie = cat" Size="ButtonSize.Small" />
+            }
+        </RadzenColumn>
+    </RadzenRow>
+
+    <RadzenDataGrid Data="@RecettesFiltrees" TItem="Recette" AllowSorting="true" AllowPaging="true" PageSize="6">
+        <Columns>
+            <RadzenDataGridColumn TItem="Recette" Property="Nom" Title="Nom" />
+            <RadzenDataGridColumn TItem="Recette" Title="Catégorie" Width="140px">
+                <Template Context="r">
+                    <RadzenBadge Text="@r.Categorie" BadgeStyle="BadgeStyle.Info" />
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Recette" Property="TypeCuisine" Title="Cuisine" Width="140px" />
+            <RadzenDataGridColumn TItem="Recette" Property="NbPersonnes" Title="Pers." Width="80px" />
+            <RadzenDataGridColumn TItem="Recette" Title="Cal. totales" Width="130px">
+                <Template Context="r">@r.CaloriesTotales.ToString("F0") kcal</Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Recette" Title="Cal/Pers." Width="120px">
+                <Template Context="r">
+                    <RadzenBadge Text="@($"{r.CaloriesParPersonne:F0} kcal")"
+                                 BadgeStyle="@(r.CaloriesParPersonne < 500 ? BadgeStyle.Success : BadgeStyle.Warning)" />
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Recette" Title="Actions" Sortable="false" Width="110px">
+                <Template Context="r">
+                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Warning" Size="ButtonSize.Small"
+                                  Click="() => Editer(r)" class="me-1" />
+                    <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
+                                  Click="() => Supprimer(r.Id)" />
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenCard>
+
+@code {
+    private Recette _form = new();
+    private bool _modeEdition = false;
+    private string _message = "";
+    private string _filtreCategorie = "";
+    private int _ingredientChoisiId = 0;
+    private decimal _quantite = 1;
+
+    private List<Recette> _recettes = new();
+    private List<Ingredient> _ingredients = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _recettes = await RecetteService.GetAllAsync();
+        _ingredients = await IngredientService.GetAllAsync();
+    }
+
+    private IEnumerable<Recette> RecettesFiltrees =>
+        string.IsNullOrEmpty(_filtreCategorie)
+            ? _recettes
+            : _recettes.Where(r => r.Categorie == _filtreCategorie);
+
+    private void AjouterIngredient()
+    {
+        if (_ingredientChoisiId == 0 || _quantite <= 0) return;
+
+        var ing = _ingredients.FirstOrDefault(i => i.Id == _ingredientChoisiId);
+        if (ing is null) return;
+
+        var existant = _form.Ingredients.FirstOrDefault(ri => ri.Ingredient.Id == ing.Id);
+
+        if (existant is not null)
+            existant.Quantite += (double)_quantite;
+        else
+            _form.Ingredients.Add(new RecetteIngredient
+            {
+                Ingredient = ing,
+                Quantite = (double)_quantite
+            });
+
+        _ingredientChoisiId = 0;
+        _quantite = 1;
+    }
+
+    private void RetirerIngredient(RecetteIngredient ri)
+        => _form.Ingredients.Remove(ri);
+
+    private async Task Sauvegarder()
+    {
+        if (string.IsNullOrWhiteSpace(_form.Nom)) return;
+
+        if (_modeEdition)
+        {
+            await RecetteService.ModifierAsync(_form);
+            _message = $"✅ « {_form.Nom} » modifiée.";
+        }
+        else
+        {
+            await RecetteService.AjouterAsync(_form);
+            _message = $"✅ « {_form.Nom} » créée.";
+        }
+
+        await Refresh();
+        Annuler();
+    }
+
+    private async Task Refresh()
+    {
+        _recettes = await RecetteService.GetAllAsync();
+    }
+
+    private void Editer(Recette r)
+    {
+        _form = new Recette
+        {
+            Id = r.Id,
+            Nom = r.Nom,
+            Description = r.Description,
+            NbPersonnes = r.NbPersonnes,
+            Categorie = r.Categorie,
+            TypeCuisine = r.TypeCuisine,
+            Ingredients = r.Ingredients
+                .Select(ri => new RecetteIngredient
+                {
+                    Ingredient = ri.Ingredient,
+                    Quantite = ri.Quantite
+                }).ToList()
+        };
+
+        _modeEdition = true;
+        _message = "";
+    }
+
+    private async Task Supprimer(int id)
+    {
+        await RecetteService.SupprimerAsync(id);
+        _message = "🗑️ Recette supprimée.";
+
+        await Refresh();
+    }
+
+    private void Annuler()
+    {
+        _form = new Recette();
+        _modeEdition = false;
+        _ingredientChoisiId = 0;
+        _quantite = 1;
+    }
+}

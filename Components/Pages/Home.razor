@@ -1,0 +1,113 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using NutritionRecettes.Models
+@using NutritionRecettes.Services
+@inject IRecetteService RecetteService
+@inject IIngredientService IngredientService
+
+
+
+
+<PageTitle>Accueil</PageTitle>
+
+<RadzenText TextStyle="TextStyle.H4" class="mb-4">🍽️ Nutrition & Carnet de Recettes</RadzenText>
+
+<!-- Cartes de statistiques -->
+<RadzenRow Gap="1rem" class="mb-4">
+    <RadzenColumn Size="12" SizeMD="4">
+        <RadzenCard class="stat-card stat-green">
+            <div class="stat-icon">📖</div>
+            <div class="stat-value">@_recettes.Count</div>
+            <div class="stat-label">Recettes</div>
+        </RadzenCard>
+    </RadzenColumn>
+    <RadzenColumn Size="12" SizeMD="4">
+        <RadzenCard class="stat-card stat-orange">
+            <div class="stat-icon">🥕</div>
+            <div class="stat-value">@_ingredients.Count</div>
+            <div class="stat-label">Ingrédients</div>
+        </RadzenCard>
+    </RadzenColumn>
+    <RadzenColumn Size="12" SizeMD="4">
+        <RadzenCard class="stat-card stat-red">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-value">@CalMoyenne</div>
+            <div class="stat-label">Cal / Personne (moy.)</div>
+        </RadzenCard>
+    </RadzenColumn>
+</RadzenRow>
+
+<!-- Graphique en secteurs : Répartition par catégorie -->
+<RadzenRow Gap="1rem" class="mb-4">
+    <RadzenColumn Size="12" SizeMD="6">
+        <RadzenCard>
+            <RadzenText TextStyle="TextStyle.H6" class="mb-3">📊 Répartition par Catégorie</RadzenText>
+            <RadzenChart>
+                <RadzenPieSeries Data="@DonneesCategories" Title="Recettes" CategoryProperty="Label" ValueProperty="Valeur">
+                    <RadzenSeriesDataLabels Visible="true" />
+                </RadzenPieSeries>
+            </RadzenChart>
+        </RadzenCard>
+    </RadzenColumn>
+    <RadzenColumn Size="12" SizeMD="6">
+        <RadzenCard>
+            <RadzenText TextStyle="TextStyle.H6" class="mb-3">🌍 Recettes par Cuisine</RadzenText>
+            <RadzenChart>
+                <RadzenBarSeries Data="@DonneesCuisine" Title="Recettes" CategoryProperty="Label" ValueProperty="Valeur" />
+                <RadzenCategoryAxis Padding="20" />
+                <RadzenValueAxis>
+                    <RadzenGridLines Visible="true" />
+                </RadzenValueAxis>
+            </RadzenChart>
+        </RadzenCard>
+    </RadzenColumn>
+</RadzenRow>
+
+<!-- Tableau récapitulatif calories par catégorie -->
+<RadzenCard>
+    <RadzenText TextStyle="TextStyle.H6" class="mb-3">🔥 Calories moyennes par catégorie</RadzenText>
+    <RadzenDataGrid Data="@_recettes" TItem="Recette" AllowSorting="true" PageSize="5" AllowPaging="true">
+        <Columns>
+            <RadzenDataGridColumn TItem="Recette" Property="Nom" Title="Recette" />
+            <RadzenDataGridColumn TItem="Recette" Property="Categorie" Title="Catégorie" />
+            <RadzenDataGridColumn TItem="Recette" Property="TypeCuisine" Title="Cuisine" />
+            <RadzenDataGridColumn TItem="Recette" Property="NbPersonnes" Title="Personnes" />
+            <RadzenDataGridColumn TItem="Recette" Title="Cal. totales">
+                <Template Context="r">@r.CaloriesTotales.ToString("F0") kcal</Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Recette" Title="Cal/Personne">
+                <Template Context="r">@r.CaloriesParPersonne.ToString("F0") kcal</Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+</RadzenCard>
+
+@code {
+    private List<Recette> _recettes = new();
+    private List<Ingredient> _ingredients = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _recettes = await RecetteService.GetAllAsync();
+        _ingredients = await IngredientService.GetAllAsync();
+    }
+
+    private string CalMoyenne =>
+        _recettes.Any()
+            ? _recettes.Average(r => r.CaloriesParPersonne).ToString("F0")
+            : "—";
+
+    private List<ChartData> DonneesCategories =>
+        _recettes
+            .GroupBy(r => r.Categorie)
+            .Select(g => new ChartData(g.Key, g.Count()))
+            .ToList();
+
+    private List<ChartData> DonneesCuisine =>
+        _recettes
+            .GroupBy(r => r.TypeCuisine)
+            .Select(g => new ChartData(g.Key, g.Count()))
+            .ToList();
+
+    record ChartData(string Label, double Valeur);
+}
