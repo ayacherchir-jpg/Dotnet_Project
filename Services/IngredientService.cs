@@ -34,10 +34,18 @@ public class IngredientService : IIngredientService
     }
 
     public async Task ModifierAsync(Ingredient ingredient)
+{
+    var existingIngredient = await _context.Ingredients.FindAsync(ingredient.Id);
+
+    if (existingIngredient != null)
     {
-        _context.Ingredients.Update(ingredient);
+        existingIngredient.Nom = ingredient.Nom;
+        existingIngredient.Unite = ingredient.Unite;
+        existingIngredient.CaloriesParUnite = ingredient.CaloriesParUnite;
+
         await _context.SaveChangesAsync();
     }
+}
 
     public async Task SupprimerAsync(int id)
     {

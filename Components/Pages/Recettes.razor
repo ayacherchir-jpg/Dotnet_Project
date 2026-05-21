@@ -97,10 +97,10 @@
 
     <div class="d-flex gap-2 mt-2">
         <RadzenButton Text="@(_modeEdition ? "Enregistrer" : "Créer la recette")"
-                      ButtonStyle="ButtonStyle.Success" Icon="save" Click="Sauvegarder" />
+                      ButtonStyle="ButtonStyle.Success" Icon="save" Click="Sauvegarder" ButtonType="ButtonType.Button"  />
         @if (_modeEdition)
         {
-            <RadzenButton Text="Annuler" ButtonStyle="ButtonStyle.Light" Click="Annuler" />
+            <RadzenButton Text="Annuler" ButtonStyle="ButtonStyle.Light" Click="Annuler" ButtonType="ButtonType.Button" />
         }
     </div>
 
@@ -118,12 +118,12 @@
         </RadzenColumn>
         <RadzenColumn class="d-flex gap-2 justify-content-end flex-wrap">
             <RadzenButton Text="Toutes" ButtonStyle="@(_filtreCategorie == "" ? ButtonStyle.Primary : ButtonStyle.Light)"
-                          Click='() => _filtreCategorie = ""' Size="ButtonSize.Small" />
+                          Click='() => _filtreCategorie = ""' ButtonType="ButtonType.Button" ' Size="ButtonSize.Small" />
             @foreach (var cat in RecetteConstants.Categories)
             {
                 <RadzenButton Text="@cat"
                               ButtonStyle="@(_filtreCategorie == cat ? ButtonStyle.Primary : ButtonStyle.Light)"
-                              Click="() => _filtreCategorie = cat" Size="ButtonSize.Small" />
+                              Click="() => _filtreCategorie = cat" ButtonType="ButtonType.Button" Size="ButtonSize.Small" />
             }
         </RadzenColumn>
     </RadzenRow>

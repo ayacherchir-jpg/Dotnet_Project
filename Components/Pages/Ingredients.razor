@@ -33,10 +33,14 @@
                           ButtonStyle="ButtonStyle.Primary"
                           Icon="save"
                           Click="Sauvegarder"
+                          ButtonType="ButtonType.Button"
                           class="me-2" />
             @if (_modeEdition)
             {
-                <RadzenButton Text="Annuler" ButtonStyle="ButtonStyle.Light" Click="Annuler" />
+                <RadzenButton Text="Annuler"
+                               ButtonStyle="ButtonStyle.Light"
+                                Click="Annuler"
+                                ButtonType="ButtonType.Button" />
             }
         </RadzenColumn>
     </RadzenRow>
@@ -63,9 +67,9 @@
             <RadzenDataGridColumn TItem="Ingredient" Title="Actions" Sortable="false" Filterable="false" Width="130px">
                 <Template Context="ing">
                     <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Warning" Size="ButtonSize.Small"
-                                  Click="() => Editer(ing)" class="me-1" />
+                                  Click="() => Editer(ing)" ButtonType="ButtonType.Button" class="me-1" />
                     <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small"
-                                  Click="() => Supprimer(ing.Id)" />
+                                  Click="() => Supprimer(ing.Id)" ButtonType="ButtonType.Button" />
                 </Template>
             </RadzenDataGridColumn>
         </Columns>

@@ -53,22 +53,36 @@ public class RecetteService : IRecetteService
     }
 
     public async Task ModifierAsync(Recette recette)
-    {
-        var anciens = _context.RecetteIngredients
-            .Where(ri => ri.RecetteId == recette.Id);
+{
+    var recetteExistante = await _context.Recettes
+        .Include(r => r.Ingredients)
+        .FirstOrDefaultAsync(r => r.Id == recette.Id);
 
-        _context.RecetteIngredients.RemoveRange(anciens);
+    if (recetteExistante == null)
+        return;
 
-        foreach (var ri in recette.Ingredients)
+    // Mise à jour des infos simples
+    recetteExistante.Nom = recette.Nom;
+    recetteExistante.Description = recette.Description;
+    recetteExistante.NbPersonnes = recette.NbPersonnes;
+    recetteExistante.Categorie = recette.Categorie;
+    recetteExistante.TypeCuisine = recette.TypeCuisine;
+
+    // Supprimer anciens ingrédients
+    _context.RecetteIngredients.RemoveRange(recetteExistante.Ingredients);
+
+    // Ajouter nouveaux ingrédients
+    recetteExistante.Ingredients = recette.Ingredients
+        .Select(ri => new RecetteIngredient
         {
-            _context.Attach(ri.Ingredient);
-            ri.IngredientId = ri.Ingredient.Id;
-            ri.RecetteId = recette.Id;
-        }
+            IngredientId = ri.Ingredient.Id,
+            Quantite = ri.Quantite,
+            RecetteId = recette.Id
+        })
+        .ToList();
 
-        _context.Recettes.Update(recette);
-        await _context.SaveChangesAsync();
-    }
+    await _context.SaveChangesAsync();
+}
 
     public async Task SupprimerAsync(int id)
     {
